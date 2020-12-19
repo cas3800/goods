@@ -14,9 +14,6 @@ function goods_install() {
     db_insert('goods')->fields(array('name' => 'Великолепный товар','category' => 2, 'price' => 299.99))->execute();
     db_insert('goods')->fields(array('name' => 'Отличный товар','category' => 1, 'price' => 499.99))->execute();
     db_insert('goods')->fields(array('name' => 'Товар, который нужно продать','category' => 3, 'price' => 1000))->execute(); 
-    db_insert('goods')->fields(array('name' => 'Лучший товар','category' => 2, 'price' => 99.99))->execute(); 
-    db_insert('goods')->fields(array('name' => 'Рядовой товар','category' => 3, 'price' => 150))->execute(); 
-    db_insert('goods')->fields(array('name' => 'Товар, который очень нужно продать','category' => 2, 'price' => 10000))->execute(); 
 }
 
 /**

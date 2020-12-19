@@ -16,6 +16,12 @@ function goods_menu() {
     'access arguments' => array('access content'), 
     'type' => MENU_CALLBACK,
   );
+  $items['goods/api/post'] = array(
+    'title' => 'API/post', 
+    'page callback' => 'goods_post', 
+    'access arguments' => array('access content'), 
+    'type' => MENU_CALLBACK,
+  );
   return $items;
 }
 
@@ -66,10 +72,10 @@ function goods_list_datatable(){
         ),
     );
     drupal_add_js(drupal_get_path('module', 'goods') . '/js/scr.js');
-    $form = drupalform_filter();
-    $out = '<form class="form-inline" id="goods_filter" action="javascript:void(0)">'.drupal_render($form).'</form><br/>';
+    $out = form_filter();
     $out .= theme('datatable', array('header' => $header, 'rows' => goods_list(), 'attributes' => $attributes));
-    $out .= popup_form(array('name'=>'AddGood', 'action'=>'', 'title'=>t('Новый товар'), 'button_text'=> t('Добавить'), 'form'=>''));
+    $out .= modal_form(array('name'=>'AddGood', 'title'=>t('Новый товар'), 'button_text'=> t('Добавить')));
+    $out .= modal_form(array('name'=>'EditGood', 'title'=>t('Редактирование товара'), 'button_text'=> t('Сохранить')));
     return  $out;    
 }
 
@@ -78,6 +84,14 @@ function goods_list_datatable(){
  */
 function goods_list_json(){
     drupal_json_output(goods_list());
+    drupal_exit();
+}
+
+/**
+ * Реализация API/post добавляет или изменяет товар
+ */
+function goods_post(){
+    //drupal_json_output(goods_list());
     drupal_exit();
 }
 
@@ -96,7 +110,15 @@ function goods_list() {
     }
     if (filter_has_var(INPUT_GET, 'name')){
         $name = db_like($_GET['name']);
-        $query  ->condition('n.name', name);
+        $query  ->condition('n.name', $name);
+    }
+    if (filter_has_var(INPUT_GET, 'id')){
+        $id = db_like($_GET['id']);
+        $query  ->condition('n.id', $id);
+    }
+    if (filter_has_var(INPUT_GET, 'notid')){
+        $notid = db_like($_GET['notid']);
+        $query  ->condition('n.id', $notid, '<>');
     }
     if (filter_has_var(INPUT_GET, 'category')){
         $cat = db_like($_GET['category']);
@@ -125,23 +147,16 @@ function category_list($need_all = TRUE) {
     return $cat;
 }
 
-
 /**
  * Возвращает форму фильтров с кнопкой добавления нового товара
  */
-function drupalform_filter() {
-    //$form = array();
-    //$form['#action'] = "#";
-    //$form['#attributes']=array(
-    //    'class'=>'row g-3',
-    //    'action'=>'#',
-    //    );
-
+function form_filter() {
     $form['name']=array(
         '#type'=>'textfield',
         '#size'=>30,
         '#id'=>'good_name_substring',
-        '#description'=>t('Наименование')
+        '#description'=>t('Строка поиска'),
+        '#attributes'=>array('placeholder'=>t('строка поиска'))
       );
     $form['category']=array(
         '#type'=>'select',
@@ -153,7 +168,7 @@ function drupalform_filter() {
     $form['button']=array(
         '#type'=>'button',
         '#attributes'=>array('onClick'=>'javascript:UpdateGoodsDataTable();'),       
-        '#id'=>'goods_filter',
+        '#id'=>'set_goods_filter',
         '#value'=>t('Фильтр')
       );
     $form['submit']=array(
@@ -162,15 +177,37 @@ function drupalform_filter() {
         '#id'=>'goods_new',
         '#value'=>t('Добавить товар')
       );
-    return $form;
+    return '<form class="form-inline" id="goods_filter" action="javascript:void(0)">'.drupal_render($form).'</form><br/>';
 }
 
-function popup_form($param){
-    $out='<div class="modal" id="Modal'.$param['name'].'"><div class="modal-dialog modal-dialog-centered" role="document">';
+/**
+ * Возвращает модальную форму
+ */
+function modal_form($param){
+    $out ='<div class="modal" id="Modal'.$param['name'].'"><div class="modal-dialog modal-dialog-centered" role="document">';
     $out.='<div class="modal-content"><div class="modal-header"><h5 class="modal-title" id="'.$param['name'].'LongTitle">'.$param['title'].'</h5>';
-    $out.='</div><div class="modal-body">'.$param['form'].'</div><div class="modal-footer">';
+    $out.='</div><div class="modal-body">'.modal_form_content($param['name']).'</div><div class="modal-footer">';
     $out.='<button type="button" class="btn btn-secondary" onclick="javascript:Modal'.$param['name'].'.style.display=\'none\';">'.t('Закрыть').'</button>';
-    $out.='<button type="button" class="btn btn-primary" onclick="javascript:'.$param['action'].'">'.$param['button_text'].'</button>';
+    $out.='<button type="button" class="btn btn-primary" onclick="javascript:'.$param['name'].'();" id="'.$param['name'].'Button">'.$param['button_text'].'</button>';
     $out.='</div></div></div></div>';
+    return $out;
+}
+
+/**
+ * Возвращает содержимое модальной формы
+ */
+function modal_form_content($name){
+    $form['category']=array(
+        '#type'=>'select',
+        '#title'=>' ',
+        '#id'=>$name.'Category',
+        '#options'=>category_list(FALSE)
+    );
+    $out = '<input type="text" class="form-control" id="'.$name.'Name" placeholder="Наименование">';
+    $out.= '<div id="'.$name.'EmptyValidation" class="text-danger" style="display: none;">Наименование не может быть пустым.</div></form>';
+    $out.= '<div id="'.$name.'ExistValidation" class="text-danger" style="display: none;">Товар с этим наименованием уже существует.</div></form>';
+    $out.= drupal_render($form);
+    $out.= '<input type="number" value="0" min="0" step="0.01" data-number-to-fixed="2" data-number-stepfactor="100" class="form-control currency" id="'.$name.'Price">';
+    $out.= '<input type="hidden" id="'.$name.'Id" value="0" />';
     return $out;
 }
