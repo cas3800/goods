@@ -1,0 +1,5 @@
+name = Goods
+description = Goods test module.
+version = 1.0
+core = 7.x
+dependencies[] = datatables (>=7.x-1.2)

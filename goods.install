@@ -1,0 +1,119 @@
+<?php
+
+/**
+ * Реализация hook_install()
+ * Создание таблиц и записей категорий товаров
+ */
+function goods_install() {
+    // Заполнение таблицы категорий товаров данными для теста
+    db_insert('category')->fields(array('name' => 'Первая категория',))->execute();
+    db_insert('category')->fields(array('name' => 'Вторая категория',))->execute();
+    db_insert('category')->fields(array('name' => 'Третья категория',))->execute();
+    // Заполнение таблицы товаров данными для теста
+    db_insert('goods')->fields(array('name' => 'Хороший товар','category' => 1, 'price' => 199.99))->execute();
+    db_insert('goods')->fields(array('name' => 'Великолепный товар','category' => 2, 'price' => 299.99))->execute();
+    db_insert('goods')->fields(array('name' => 'Отличный товар','category' => 1, 'price' => 499.99))->execute();
+    db_insert('goods')->fields(array('name' => 'Товар, который нужно продать','category' => 3, 'price' => 1000))->execute(); 
+    db_insert('goods')->fields(array('name' => 'Лучший товар','category' => 2, 'price' => 99.99))->execute(); 
+    db_insert('goods')->fields(array('name' => 'Рядовой товар','category' => 3, 'price' => 150))->execute(); 
+    db_insert('goods')->fields(array('name' => 'Товар, который очень нужно продать','category' => 2, 'price' => 10000))->execute(); 
+}
+
+/**
+ * Реализация hook_uninstall()
+ * Удаление таблиц
+ */
+function goods_uninstall() {
+    drupal_uninstall_schema('goods');
+}
+
+/**
+ * Реализация hook_shema()
+ * Описание таблиц товаров и категорий
+ */
+function goods_schema() {
+    
+    $schema['goods'] = array(
+    'description' => 'Table for goods.',
+    'fields' => array(
+      'id' => array(
+        'description' => 'Identifier',
+        'type' => 'serial',
+        'unsigned' => TRUE,
+        'not null' => TRUE,
+      ),
+      'name' => array(
+        'description' => 'Name',
+        'type' => 'varchar',
+        'length' => 255,
+        'not null' => TRUE,
+        'default' => '',
+      ),
+      'category' => array(
+        'description' => 'Category of goods',
+        'type' => 'int',
+        'unsigned' => TRUE,
+        'not null' => TRUE,
+        'default' => 1,
+      ),
+      'price' => array(
+        'description' => 'Price',
+ 	'type' => 'float',
+ 	'unsigned' => TRUE,
+ 	'size' => 'normal',
+ 	'not null' => TRUE,
+        'default' => 0,
+      ),
+    ),
+    'indexes' => array(
+      'goods_name' => array(
+        'name',
+      ),
+      'goods_category' => array(
+        'category',
+      ),
+    ),
+    'unique keys' => array(
+      'id' => array(
+        'id',
+      ),
+      'name' => array(
+        'name',
+      ),
+    ),
+    'primary key' => array(
+      'id',
+    ),
+  );
+  
+  $schema['category'] = array(
+    'description' => 'Table for category of goods.',
+    'fields' => array(
+      'id' => array(
+        'description' => 'Identifier',
+        'type' => 'serial',
+        'unsigned' => TRUE,
+        'not null' => TRUE,
+      ),
+      'name' => array(
+        'description' => 'Name',
+        'type' => 'varchar',
+        'length' => 255,
+        'not null' => TRUE,
+        'default' => '',
+      ),
+    ),
+    'unique keys' => array(
+      'id' => array(
+        'id',
+      ),
+      'name' => array(
+        'name',
+      ),
+    ),
+    'primary key' => array(
+      'id',
+    ),
+  );
+  return $schema;
+}

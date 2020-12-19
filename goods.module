@@ -1,0 +1,176 @@
+<?php
+
+/**
+ * hook_menu
+ */
+function goods_menu() {
+  $items['goods'] = array(
+    'title' => t('Список товаров'), 
+    'page callback' => 'goods_list_datatable', 
+    'access arguments' => array('access content'), 
+    'type' => MENU_NORMAL_ITEM,
+  );
+  $items['goods/api/list'] = array(
+    'title' => 'API/list', 
+    'page callback' => 'goods_list_json', 
+    'access arguments' => array('access content'), 
+    'type' => MENU_CALLBACK,
+  );
+  return $items;
+}
+
+/**
+ * Вывод списка товаров в DataTable c формой фильтрации
+ */
+function goods_list_datatable(){
+    $attributes['datatable_options'] = array(
+        'bFilter' => FALSE,
+        'bInfo' => FALSE,
+        'iDisplayLength' => 25,
+        'bLengthChange' => FALSE,
+        'bSearchable' => FALSE,
+        'sDom' => 'tpr',
+        'oLanguage' => array('sUrl' => 'http://cdn.datatables.net/plug-ins/a5734b29083/i18n/Russian.json'),
+    );
+    $header = array(
+        array(
+            'data' => t('Код'),
+            'datatable_options' => array(
+            'bSortable' => FALSE,
+            ),
+        ),
+        array(
+            'data' => t('Наименование'),
+            'datatable_options' => array(
+            'bSortable' => TRUE,
+            ),
+        ),
+        array(
+            'data' => t('Код категории'),
+            'datatable_options' => array(
+            'bSortable' => FALSE,
+            'bVisible' => FALSE
+            ),
+        ),
+        array(
+            'data' => t('Категория'),
+            'datatable_options' => array(
+            'bSortable' => FALSE,
+            ),
+        ),
+        array(
+            'data' => t('Цена'),
+            'datatable_options' => array(
+            'bSortable' => TRUE,
+            ),
+        ),
+    );
+    drupal_add_js(drupal_get_path('module', 'goods') . '/js/scr.js');
+    $form = drupalform_filter();
+    $out = '<form class="form-inline" id="goods_filter" action="javascript:void(0)">'.drupal_render($form).'</form><br/>';
+    $out .= theme('datatable', array('header' => $header, 'rows' => goods_list(), 'attributes' => $attributes));
+    $out .= popup_form(array('name'=>'AddGood', 'action'=>'', 'title'=>t('Новый товар'), 'button_text'=> t('Добавить'), 'form'=>''));
+    return  $out;    
+}
+
+/**
+ * Реализация API/list список товаров JSON
+ */
+function goods_list_json(){
+    drupal_json_output(goods_list());
+    drupal_exit();
+}
+
+/**
+ * Получение списка товаров из бд в соответствии с параметрами запроса GET
+ */
+function goods_list() {
+    $query = db_select('goods', 'n');
+    $query  ->join('category', 'c', 'n.category = c.id');
+    $query  ->fields('n', array('id', 'name'))
+            ->fields('c', array('id', 'name'))
+            ->fields('n', array('price'));
+    if (filter_has_var(INPUT_GET, 'name_substring')){
+        $substr = db_like($_GET['name_substring']);
+        $query  ->condition('n.name', '%' . $substr . '%', 'LIKE');
+    }
+    if (filter_has_var(INPUT_GET, 'name')){
+        $name = db_like($_GET['name']);
+        $query  ->condition('n.name', name);
+    }
+    if (filter_has_var(INPUT_GET, 'category')){
+        $cat = db_like($_GET['category']);
+        if ($cat > 0) $query  ->condition('c.id', $cat);
+    }
+    return $query->orderBy('n.id')
+            ->execute()    
+            ->fetchAll(PDO::FETCH_ASSOC);
+}
+
+/**
+ * Получение категорий товаров из бд
+ * $need_all = TRUE добавляет строку для всех категорий
+ **/
+function category_list($need_all = TRUE) {
+    $query = db_select('category', 'c');
+    $result = $query->fields('c', array('id', 'name'))
+            ->orderBy('c.id')
+            ->execute()    
+            ->fetchAll(PDO::FETCH_ASSOC);
+    if ($need_all) $cat['0']=t('Все категории');
+    foreach ($result as $row)
+    {	
+        $cat[$row['id']]=$row['name'];
+    }
+    return $cat;
+}
+
+
+/**
+ * Возвращает форму фильтров с кнопкой добавления нового товара
+ */
+function drupalform_filter() {
+    //$form = array();
+    //$form['#action'] = "#";
+    //$form['#attributes']=array(
+    //    'class'=>'row g-3',
+    //    'action'=>'#',
+    //    );
+
+    $form['name']=array(
+        '#type'=>'textfield',
+        '#size'=>30,
+        '#id'=>'good_name_substring',
+        '#description'=>t('Наименование')
+      );
+    $form['category']=array(
+        '#type'=>'select',
+        '#suffix' => '&nbsp',
+        '#title'=>' ',
+        '#id'=>'good_category',
+        '#options'=>category_list()
+      );
+    $form['button']=array(
+        '#type'=>'button',
+        '#attributes'=>array('onClick'=>'javascript:UpdateGoodsDataTable();'),       
+        '#id'=>'goods_filter',
+        '#value'=>t('Фильтр')
+      );
+    $form['submit']=array(
+        '#type'=>'button',
+        '#attributes'=>array('onClick'=>'javascript:OpenModalAddGood();'),       
+        '#id'=>'goods_new',
+        '#value'=>t('Добавить товар')
+      );
+    return $form;
+}
+
+function popup_form($param){
+    $out='<div class="modal" id="Modal'.$param['name'].'"><div class="modal-dialog modal-dialog-centered" role="document">';
+    $out.='<div class="modal-content"><div class="modal-header"><h5 class="modal-title" id="'.$param['name'].'LongTitle">'.$param['title'].'</h5>';
+    $out.='</div><div class="modal-body">'.$param['form'].'</div><div class="modal-footer">';
+    $out.='<button type="button" class="btn btn-secondary" onclick="javascript:Modal'.$param['name'].'.style.display=\'none\';">'.t('Закрыть').'</button>';
+    $out.='<button type="button" class="btn btn-primary" onclick="javascript:'.$param['action'].'">'.$param['button_text'].'</button>';
+    $out.='</div></div></div></div>';
+    return $out;
+}
