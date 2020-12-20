@@ -2,18 +2,13 @@
 
 /**
  * Реализация hook_install()
- * Создание таблиц и записей категорий товаров
+ * Создание записей категорий товаров
  */
 function goods_install() {
     // Заполнение таблицы категорий товаров данными для теста
     db_insert('category')->fields(array('name' => 'Первая категория',))->execute();
     db_insert('category')->fields(array('name' => 'Вторая категория',))->execute();
     db_insert('category')->fields(array('name' => 'Третья категория',))->execute();
-    // Заполнение таблицы товаров данными для теста
-    db_insert('goods')->fields(array('name' => 'Хороший товар','category' => 1, 'price' => 199.99))->execute();
-    db_insert('goods')->fields(array('name' => 'Великолепный товар','category' => 2, 'price' => 299.99))->execute();
-    db_insert('goods')->fields(array('name' => 'Отличный товар','category' => 1, 'price' => 499.99))->execute();
-    db_insert('goods')->fields(array('name' => 'Товар, который нужно продать','category' => 3, 'price' => 1000))->execute(); 
 }
 
 /**

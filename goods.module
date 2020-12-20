@@ -32,7 +32,7 @@ function goods_list_datatable(){
     $attributes['datatable_options'] = array(
         'bFilter' => FALSE,
         'bInfo' => FALSE,
-        'iDisplayLength' => 25,
+        'iDisplayLength' => 10,
         'bLengthChange' => FALSE,
         'bSearchable' => FALSE,
         'sDom' => 'tpr',
@@ -91,7 +91,23 @@ function goods_list_json(){
  * Реализация API/post добавляет или изменяет товар
  */
 function goods_post(){
-    //drupal_json_output(goods_list());
+    $fields = array(
+        'name' => db_like($_POST['name']),
+        'category' => db_like($_POST['category']),
+        'price' => db_like($_POST['price']),
+    );
+    if (filter_has_var(INPUT_POST, 'id')){    
+        $id = db_like($_POST['id']);
+        db_update('goods')
+            ->fields($fields)
+            ->condition('id', $id)
+            ->execute();
+    }
+    else{
+        db_insert('goods')
+            ->fields($fields)
+            ->execute();
+    }
     drupal_exit();
 }
 
